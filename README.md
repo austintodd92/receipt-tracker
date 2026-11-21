@@ -1,53 +1,56 @@
-# Dining Tracker
+# Dining Tracker — clean setup
 
 A shared eating-out tracker for two iPhones. Type in what you paid for a meal (including the tip) and see what's left for the week.
 
-**Budget rules:** the monthly budget is split across the month by days. Weeks run Sunday to Saturday and are cut off at the end of the month. Money left over rolls into the next week, and overspending comes out of the next week. Everything resets on the 1st.
+**Budget rules:** the monthly budget is split across the month by days. Weeks run Sunday to Saturday. Money left over rolls into the next week, and overspending comes out of the next week. Everything resets on the 1st.
 
-```
-index.html, app.js, budget.js, config.js, manifest.json, icons/   ← the web app (GitHub Pages)
-supabase/schema.sql                                               ← database + privacy rules
-supabase/add-parents.sql                                          ← links the two logins to one budget
-```
-
-Setup takes about 30 minutes. Do the steps in order.
+Setup takes about 20 minutes. Do the steps in order.
 
 ---
 
-## 1. Set up Supabase
+## 1. Supabase logins
 
-**a. Database.** Supabase dashboard, then **SQL Editor**, then **New query**. Paste all of `supabase/schema.sql` and click **Run**.
+**Authentication → Users**
+- If either parent is listed more than once, or you're unsure about one, delete them.
+- Then **Add user → Create new user** for each parent: email plus a password, with **Auto confirm user** ticked. Write down exactly what you typed.
 
-**b. Turn off public sign-ups.** Go to **Authentication**, then sign-in / provider settings, and turn **off** "Allow new users to sign up". This plus the database rules is what makes it "only them."
+**Authentication → sign-in / provider settings:** turn **off** "Allow new users to sign up".
 
-**c. Create the two logins.** Go to **Authentication**, **Users**, **Add user**, then **Create new user**. Enter each parent's email and a password, and tick **Auto confirm user**.
+## 2. Database (one file)
 
-**d. Link them to one budget.** Open `supabase/add-parents.sql`, replace the two emails, names, and the monthly budget, then run it in the SQL Editor. The last query should list both parents.
+1. Open `supabase/setup.sql`. In **STEP 3** at the bottom, change the 2 emails, the 2 names, and the budget.
+2. In Supabase, go to **SQL Editor → New query**, paste in the **whole** file, and click **Run**.
+3. The result at the bottom must list **both parents**, each with `confirmed = true`. If one is missing, their email doesn't match Authentication → Users. Fix it and run the file again (it wipes the database and rebuilds it every time).
 
-**e. Get the app's keys.** Go to **Project Settings**, then **API** (or **API Keys**). Copy the **Project URL** and the **anon / publishable** key into `config.js`. Never use the `service_role` / secret key there.
+## 3. config.js
 
-## 2. Put the app online (GitHub Pages)
+In Supabase, go to **Project Settings → API** (or **API Keys**) and copy two things into `config.js`:
+- **Project URL**, which looks like `https://abcdefgh.supabase.co`. No `/` at the end.
+- **anon / publishable key**. Copy the whole thing. Never the `service_role` / secret key.
 
-1. Create a GitHub repo, for example `dining-tracker`. Upload everything **except** the `supabase/` folder (uploading it is harmless, though, since it has no secrets). The free GitHub Pages plan needs the repo to be **public**. That's OK: the database rules keep the data private,.
-2. In the repo, go to **Settings**, **Pages**, then **Deploy from a branch**, choose `main` and `/ (root)`, and **Save**.
-3. After a minute, the site is at `https://YOUR-USERNAME.github.io/dining-tracker/`.
+Keep the quote marks and add no spaces inside them. If you get this wrong, the app shows a **Setup problem** screen telling you exactly what to fix.
 
-## 3. Put it on their iPhones
+## 4. GitHub Pages
 
-On each phone, open the link in **Safari** (not Chrome). Tap **Share**, then **Add to Home Screen**. Open it from the new icon and sign in. They'll stay signed in.
+1. In your repo, delete all the old files, then upload everything in this folder **except** `supabase/` and `tests/`: `index.html`, `app.js`, `budget.js`, `config.js`, `manifest.json`, and the `icons` folder.
+2. Go to **Settings → Pages**, choose **Deploy from a branch**, then `main` and `/ (root)`. Wait 1–2 minutes after uploading.
+3. Open `https://YOUR-USERNAME.github.io/REPO-NAME/` on your laptop and sign in as each parent to test.
 
-## 4. Test before handing it over
+## 5. Phones
 
-- [ ] Sign in as parent 1 and add a meal.
-- [ ] Sign in as parent 2 on the other phone. The meal shows up, and "left this week" matches.
-- [ ] Tap a meal to edit it, then delete it.
-- [ ] Settings: change the budget. Summary: page back to last month.
-- [ ] In a private Safari tab, signed out, the app shows only the login screen.
+On each phone, delete the old home-screen icon. Open the link in **Safari**, tap **Share**, then **Add to Home Screen**, and sign in.
 
 ---
 
-## Making changes later
+## If something still fails
 
-- **Weeks start Monday instead of Sunday:** in `budget.js`, set `WEEK_STARTS_ON = 1`.
-- **Updating the app:** commit to GitHub. The phones get the new version the next time the app is opened (there's no offline cache, on purpose, so updates show up right away).
-- **Checking that the budget math still works:** `node tests/budget.test.mjs`
+The app always shows the reason in **(Details: …)**:
+
+| Details say | Meaning | Fix |
+|---|---|---|
+| Invalid login credentials | Wrong email or password | Re-create the user in step 1 and type carefully |
+| Email not confirmed | Auto confirm wasn't ticked | Re-create with it ticked, then rerun `setup.sql` |
+| Failed to fetch / Load failed | The device can't reach Supabase | If other devices work: turn off VPN, content blockers, iCloud Private Relay |
+| "Almost there" screen | That login isn't on the budget | Rerun `setup.sql` with the right emails |
+
+**Changing things later:** you can change the budget in the app's Settings. To make weeks start Monday, set `WEEK_STARTS_ON = 1` in `budget.js`. To check the budget math still works: `node tests/budget.test.mjs`.

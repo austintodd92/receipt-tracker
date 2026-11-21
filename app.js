@@ -2,11 +2,27 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 import { currentWeek, monthBreakdown, monthRange, parseDate, fmtDate } from "./budget.js";
 
+const app = document.getElementById("app");
+
+// Catch the most common setup mistake before anything else: a wrong config.js.
+const CONFIG_PROBLEM = (() => {
+  const url = String(SUPABASE_URL || "").trim();
+  const key = String(SUPABASE_ANON_KEY || "").trim();
+  if (url !== SUPABASE_URL || key !== SUPABASE_ANON_KEY) return "config.js has extra spaces inside the quotes.";
+  if (url.includes("YOUR-PROJECT") || key.includes("YOUR-")) return "config.js still has the placeholder values. Paste in your Project URL and anon/publishable key.";
+  if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url))
+    return `SUPABASE_URL should look like https://abcdefgh.supabase.co (no slash or path at the end). It is currently: ${url}`;
+  if (key.length < 30) return "SUPABASE_ANON_KEY looks too short. Copy the whole key again.";
+  return "";
+})();
+if (CONFIG_PROBLEM) {
+  app.innerHTML = `<h1>Setup problem</h1><div class="notice">${CONFIG_PROBLEM.replace(/</g, "&lt;")}</div>`;
+  throw new Error(CONFIG_PROBLEM);
+}
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true },
 });
-
-const app = document.getElementById("app");
 const tabs = document.getElementById("tabs");
 
 const state = {
@@ -118,6 +134,8 @@ function renderLogin(msg = "") {
       const m = String(error.message || "");
       let msg = "That email or password didn't work.";
       if (/confirm/i.test(m)) msg = "This email hasn't been confirmed in Supabase yet.";
+      if (/fetch|load failed|network/i.test(m))
+        msg = "Couldn't reach the server. If other phones can sign in, a VPN, content blocker or iCloud Private Relay on this phone may be blocking it.";
       renderLogin(`${msg} (Details: ${m || error.status || "unknown"})`);
     }
     // success is handled by onAuthStateChange
@@ -130,7 +148,7 @@ function renderNoHousehold() {
     <h1>Almost there</h1>
     <div class="card stack">
       <p>You're signed in as <b>${esc(state.user.email)}</b>, but this login isn't linked to a budget yet.</p>
-      <p class="muted small">Run <code>add-parents.sql</code> in Supabase with this email, then reopen the app.</p>
+      <p class="muted small">Rerun <code>supabase/setup.sql</code> with this email in STEP 3, then reopen the app.</p>
       <button class="secondary" id="out">Sign out</button>
     </div>`;
   document.getElementById("out").onclick = () => supabase.auth.signOut();
