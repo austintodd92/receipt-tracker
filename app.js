@@ -374,7 +374,16 @@ async function onSession(session) {
     await refresh();
   } catch (err) {
     console.error(err);
-    app.innerHTML = `<h1>Dining Tracker</h1><div class="notice">Couldn't connect. Check your internet and reopen the app.</div>`;
+    const detail = [err?.code, err?.message, err?.hint].filter(Boolean).join(" — ");
+    app.innerHTML = `<h1>Dining Tracker</h1>
+      <div class="card stack">
+        <div class="notice">Couldn't load your budget.</div>
+        <div class="muted small">Details: ${esc(detail || String(err))}</div>
+        <button class="primary" id="retry">Try again</button>
+        <button class="link" id="out">Sign out</button>
+      </div>`;
+    document.getElementById("retry").onclick = () => onSession(session);
+    document.getElementById("out").onclick = () => supabase.auth.signOut();
     return;
   }
   setTab("home");

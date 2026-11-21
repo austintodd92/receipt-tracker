@@ -89,5 +89,12 @@ create policy "members edit receipts" on public.receipts
 create policy "members delete receipts" on public.receipts
   for delete to authenticated using (public.is_member(household_id));
 
+-- Let logged-in users reach the tables through the app (the policies above
+-- still decide which rows they see). Newer Supabase projects need this.
+grant usage on schema public to authenticated;
+grant select, update on public.households to authenticated;
+grant select on public.household_members to authenticated;
+grant select, insert, update, delete on public.receipts to authenticated;
+
 -- No access at all for logged-out visitors.
 revoke all on public.households, public.household_members, public.receipts from anon;
