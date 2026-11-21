@@ -100,7 +100,7 @@ function renderLogin(msg = "") {
     <form class="card stack" id="login">
       ${msg ? `<div class="notice">${esc(msg)}</div>` : ""}
       <div><label for="email">Email</label>
-        <input id="email" type="email" autocomplete="username" required /></div>
+        <input id="email" type="email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required /></div>
       <div><label for="pw">Password</label>
         <input id="pw" type="password" autocomplete="current-password" required /></div>
       <button class="primary" type="submit">Sign in</button>
@@ -114,8 +114,11 @@ function renderLogin(msg = "") {
       password: document.getElementById("pw").value,
     });
     if (error) {
-      btn.disabled = false;
-      renderLogin("That email or password didn't work.");
+      console.error(error);
+      const m = String(error.message || "");
+      let msg = "That email or password didn't work.";
+      if (/confirm/i.test(m)) msg = "This email hasn't been confirmed in Supabase yet.";
+      renderLogin(`${msg} (Details: ${m || error.status || "unknown"})`);
     }
     // success is handled by onAuthStateChange
   });
